@@ -74,11 +74,15 @@ void gpioInit(void)
 	GPIOPinWrite(GPIO_PORTC_BASE, LCD_CS, LCD_CS);
 	GPIOPinWrite(GPIO_PORTG_BASE, LCD_Light, 0);
 
-	GPIOPinTypeGPIOOutput(LCD_LIGHT_PORT, LCD_LIGHT_PIN);
+	/*GPIOPinTypeGPIOOutput(LCD_LIGHT_PORT, LCD_LIGHT_PIN);
 	GPIOPadConfigSet(LCD_LIGHT_PORT, LCD_LIGHT_PIN,
 					 GPIO_STRENGTH_8MA, GPIO_PIN_TYPE_STD_WPD);
 
-	GPIOPinWrite(LCD_LIGHT_PORT, LCD_LIGHT_PIN, 0);
+	GPIOPinWrite(LCD_LIGHT_PORT, LCD_LIGHT_PIN, 0);*/
+
+	/* PWM */
+	GPIOPinTypeTimer(LCD_LIGHT_PORT, LCD_LIGHT_PIN);
+	//GPIOPinConfigure(GPIO_P)
 
 	/* SPI Block */
 	// Pin-zuweisungen fürs SSI-Interface
@@ -108,6 +112,9 @@ void gpioInit(void)
 
     GPIOPinTypeGPIOInput(GPIO_PORTG_BASE, GPIO_PIN_0);
     GPIOPadConfigSet(GPIO_PORTG_BASE, GPIO_PIN_0, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+
+    /* I2C */
+    GPIOPinTypeI2C(GPIO_PORTA_BASE, GPIO_PIN_6 | GPIO_PIN_7);
 
 }
 
@@ -182,7 +189,7 @@ uint8_t gpioGet(uint8_t byPin)
 	return byState;
 }
 
-void gpioLedTest(void)
+/*void gpioLedTest(void)
 {
 	static uint8_t byLedState = 0;
 	static uint16_t dwTime = 0;
@@ -232,4 +239,4 @@ void gpioLedTest(void)
 		dwTime = timerGetTick() + 500;
 		byLedState++;
 	}
-}
+}*/

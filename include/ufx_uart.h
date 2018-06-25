@@ -5,12 +5,15 @@
 
 #define DMX_CHANNELS	512
 
-void uartInit(void);
-void uartSendByte(const char cByte);
-void uartSendString(const char *pcBuffer, unsigned long ulCount);
+extern void uartInit(void);
+extern void uartSendByte(const char cByte);
+extern void uartSendString(const char *pcBuffer, unsigned long ulCount);
 
-void uartDMXSend(void);
+uint8_t uartBusy(void);
+void uartDmxSendByte(uint8_t byData);
+void uartDmxSendByteNonBlocking(uint8_t byData);
 
-extern volatile uint8_t byaDmxData[DMX_CHANNELS];
+extern void uartDMXRate(void);
+extern void uartBreakRate(void);
 
 #endif

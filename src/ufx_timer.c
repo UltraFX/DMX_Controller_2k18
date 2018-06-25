@@ -45,6 +45,25 @@ void timerMainInit(void)
 	TimerEnable(TIMER0_BASE, TIMER_A);
 }
 
+void timerPWMInit(void)
+{
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
+
+	TimerConfigure(TIMER1_BASE, TIMER_CFG_16_BIT_PAIR | TIMER_CFG_A_PWM);
+	TimerLoadSet(TIMER1_BASE, TIMER_A, SysCtlClockGet()/2000);
+
+	TimerMatchSet(TIMER1_BASE, TIMER_A, 20000);
+
+	TimerEnable(TIMER1_BASE, TIMER_A);
+}
+
+void timerPWMSet(uint8_t byVal)
+{
+	uint16_t wVal = (uint16_t)byVal * 250;
+
+	TimerMatchSet(TIMER1_BASE, TIMER_A, wVal);
+}
+
 void timerDelayMS(uint32_t dwDelay)
 {
 	uint32_t dwEnd = dwTick + dwDelay;

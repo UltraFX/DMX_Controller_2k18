@@ -7,18 +7,6 @@
 
 #include "main.h"
 
-enum
-{
-	BREAK = 0,
-	STARTBIT,
-	DMXDATA
-};
-
-volatile uint8_t byaDmxData[DMX_CHANNELS] = {0};
-
-static void uartDMXRate(void);
-static void uartBreakRate(void);
-
 //static void uartDMXHandler(void);
 
 void uartInit(void)
@@ -53,6 +41,21 @@ void uartSendByte(const char cByte)
         UARTCharPut(UART1_BASE, cByte);
 }
 
+void uartDmxSendByte(uint8_t byData)
+{
+	UARTCharPut(UART0_BASE, (const char*)byData);
+}
+
+void uartDmxSendByteNonBlocking(uint8_t byData)
+{
+	UARTCharPutNonBlocking(UART0_BASE, (const char*)byData);
+}
+
+uint8_t uartBusy(void)
+{
+	return (uint8_t)UARTBusy(UART0_BASE);
+}
+
 void uartSendString(const char *pcBuffer, unsigned long ulCount)
 {
     //
@@ -67,53 +70,7 @@ void uartSendString(const char *pcBuffer, unsigned long ulCount)
     }
 }
 
-//DMX Sende-Routine
-void uartDMXSend(void)
-{
-	static uint8_t byDmxState = BREAK;
-	static uint16_t wDmxNum = 0;
 
-    // DMX-Daten senden
-    switch(byDmxState)
-	{
-    // BREAK erzeugen
-    case BREAK:
-    	uartBreakRate();
-		UARTCharPut(UART0_BASE, 0);
-		//while(UARTBusy(UART0_BASE));
-		byDmxState = STARTBIT;
-		break;
-
-	// Startbit senden
-	case STARTBIT:
-		uartDMXRate();
-		UARTCharPutNonBlocking(UART0_BASE, 0);
-		byDmxState = DMXDATA;
-		break;
-
-	//DMX Daten senden
-	case DMXDATA:
-		if(wDmxNum < DMX_CHANNELS)
-		{
-			for(wDmxNum = 0; wDmxNum < DMX_CHANNELS; wDmxNum++)
-			{
-				UARTCharPut(UART0_BASE, byaDmxData[wDmxNum]);
-				while(UARTBusy(UART0_BASE));
-			}
-		}
-		else
-	    {
-			wDmxNum = 0;
-			byDmxState = BREAK;
-		}
-		break;
-
-	default:
-		wDmxNum = BREAK;
-        break;
-	}
-
-}
 
 //Normale DMX-Rate
 void uartDMXRate(void)

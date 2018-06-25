@@ -54,9 +54,7 @@ static void progMoodlight(void)
 		}
 
 		sColor = hsv2rgb(sMood);
-		byaDmxData[21] = sColor.byR;
-		byaDmxData[22] = sColor.byG;
-		byaDmxData[23] = sColor.byB;
+		dmxSetRGB(2, sColor);
 	}
 }
 

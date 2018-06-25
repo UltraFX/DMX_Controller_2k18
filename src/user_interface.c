@@ -46,8 +46,10 @@ void vUITask( void *pvParameters )
 	uint32_t dwADC[3];
 	static uint8_t byLedAct[5] = {0};
 	static uint8_t byEnter = 0;
+	static uint8_t byBrightness = 0;
 
 	timerMainInit();
+	timerPWMInit();
 	adcInit();
 	//pwmInit();
 
@@ -57,6 +59,8 @@ void vUITask( void *pvParameters )
 
 	guiInit();
 	menu_init();
+
+	timerPWMSet(80);
 
 
 	while(1)

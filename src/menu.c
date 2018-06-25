@@ -274,46 +274,43 @@ static void progAct(void)
 static void setColor(void)
 {
 	uint8_t byColor = psCurrentMenu->psElement[psCurrentMenu->byCurElement].byID;
-
-	byaDmxData[21] = 0;
-	byaDmxData[22] = 0;
-	byaDmxData[23] = 0;
-	byaDmxData[24] = 0;
+	static rgb_t byCol = {0,0,0};
+	static uint8_t byWhite = 0;
 
 	switch(byColor)
 	{
 	case ELEM_RED:
-		byaDmxData[21] = 255;
+		byCol.byR = 255;
 		break;
 	case ELEM_GREEN:
-		byaDmxData[22] = 255;
+		byCol.byG = 255;
 		break;
 	case ELEM_BLUE:
-		byaDmxData[23] = 255;
+		byCol.byB = 255;
 		break;
 	case ELEM_WHITE:
-		byaDmxData[24] = 255;
+		byWhite = 255;
 		break;
 	case ELEM_MAG:
-		byaDmxData[21] = 255;
-		byaDmxData[23] = 255;
+		byCol.byR = 255;
+		byCol.byB = 255;
 		break;
 	case ELEM_CYAN:
-		byaDmxData[22] = 255;
-		byaDmxData[23] = 255;
+		byCol.byB = 255;
+		byCol.byR = 255;
 		break;
 	case ELEM_YEL:
-		byaDmxData[21] = 255;
-		byaDmxData[22] = 255;
+		byCol.byR = 255;
+		byCol.byG = 255;
 		break;
 	case ELEM_USER_0:
-		byaDmxData[21] = 255;
-		byaDmxData[22] = 255;
-		byaDmxData[23] = 255;
+		byCol.byR = 255;
+		byCol.byG = 255;
+		byCol.byB = 255;
 		break;
 	case ELEM_USER_1:
-		byaDmxData[21] = 50;
-		byaDmxData[22] = 255;
+		byCol.byR = 50;
+		byCol.byG = 255;
 		break;
 	case ELEM_USER_2:
 		break;
@@ -322,4 +319,7 @@ static void setColor(void)
 	default:
 		break;
 	}
+
+	dmxSetRGB(2, (rgb_t)byCol);
+	dmxSetWhite(2, byWhite);
 }
