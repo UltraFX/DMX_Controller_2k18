@@ -274,8 +274,8 @@ static void progAct(void)
 static void setColor(void)
 {
 	uint8_t byColor = psCurrentMenu->psElement[psCurrentMenu->byCurElement].byID;
-	static rgb_t byCol = {0,0,0};
-	static uint8_t byWhite = 0;
+	rgb_t byCol = {0,0,0};
+	uint8_t byWhite = 0;
 
 	switch(byColor)
 	{
@@ -297,7 +297,7 @@ static void setColor(void)
 		break;
 	case ELEM_CYAN:
 		byCol.byB = 255;
-		byCol.byR = 255;
+		byCol.byG = 255;
 		break;
 	case ELEM_YEL:
 		byCol.byR = 255;
@@ -320,6 +320,6 @@ static void setColor(void)
 		break;
 	}
 
-	dmxSetRGB(2, (rgb_t)byCol);
-	dmxSetWhite(2, byWhite);
+	progSetColor(byCol);
+	progSetWhite(byWhite);
 }

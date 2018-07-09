@@ -9,5 +9,6 @@ extern void setDeviceIDs(uint8_t *pbyIDs);
 
 extern void dmxSetRGB(uint8_t byDevice, rgb_t sRGB);
 extern void dmxSetWhite(uint8_t byDevice, uint8_t byVal);
+extern rgb_t dmxGetRGB(uint8_t byDevice);
 
 #endif

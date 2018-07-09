@@ -45,6 +45,17 @@ void dmxSetRGB(uint8_t byDevice, rgb_t sRGB)
 	byaDmxData[byaDeviceID[byDevice]+2] = sRGB.byB;
 }
 
+rgb_t dmxGetRGB(uint8_t byDevice)
+{
+	rgb_t sRGB = {0, 0, 0};
+
+	sRGB.byR = byaDmxData[byaDeviceID[byDevice]];
+	sRGB.byG = byaDmxData[byaDeviceID[byDevice]+1];
+	sRGB.byB = byaDmxData[byaDeviceID[byDevice]+2];
+
+	return sRGB;
+}
+
 void dmxSetWhite(uint8_t byDevice, uint8_t byVal)
 {
 	byaDmxData[byaDeviceID[byDevice]+3] = byVal;

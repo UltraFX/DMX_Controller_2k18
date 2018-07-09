@@ -11,6 +11,7 @@
 void vUITask( void *pvParameters );
 
 void uiIntCallback(void);
+uint8_t uiGetButtonStates(void);
 uint8_t uiDebounceButtons(void);
 uint8_t uiGetButton(uint8_t byButton);
 

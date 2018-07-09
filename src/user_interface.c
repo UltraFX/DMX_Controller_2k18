@@ -18,6 +18,8 @@ volatile uint16_t wTime = 0;
 static int8_t iLastVal = 0;
 static int8_t iEnc_delta = 0;
 
+static uint8_t byButState = 0;
+
 static const int16_t iaTable[16] = {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0};
 
 struct
@@ -75,11 +77,13 @@ void vUITask( void *pvParameters )
 			{
 				gpioSet(GPIO_LED_0, 0);
 				byLedAct[0] = 1;
+				byButState |= BUTTON0;
 			}
 			else
 			{
 				gpioSet(GPIO_LED_0, 1);
 				byLedAct[0] = 0;
+				byButState &= ~BUTTON0;
 
 			}
 		}
@@ -90,11 +94,13 @@ void vUITask( void *pvParameters )
 			{
 				gpioSet(GPIO_LED_1, 0);
 				byLedAct[1] = 1;
+				byButState |= BUTTON1;
 			}
 			else
 			{
 				gpioSet(GPIO_LED_1, 1);
 				byLedAct[1] = 0;
+				byButState &= ~BUTTON1;
 
 			}
 		}
@@ -105,11 +111,13 @@ void vUITask( void *pvParameters )
 			{
 				gpioSet(GPIO_LED_2, 0);
 				byLedAct[2] = 1;
+				byButState |= BUTTON2;
 			}
 			else
 			{
 				gpioSet(GPIO_LED_2, 1);
 				byLedAct[2] = 0;
+				byButState &= ~BUTTON2;
 
 			}
 		}
@@ -120,11 +128,13 @@ void vUITask( void *pvParameters )
 			{
 				gpioSet(GPIO_LED_3, 0);
 				byLedAct[3] = 1;
+				byButState |= BUTTON3;
 			}
 			else
 			{
 				gpioSet(GPIO_LED_3, 1);
 				byLedAct[3] = 0;
+				byButState &= ~BUTTON3;
 
 			}
 		}
@@ -135,11 +145,13 @@ void vUITask( void *pvParameters )
 			{
 				gpioSet(GPIO_LED_4, 0);
 				byLedAct[4] = 1;
+				byButState |= BUTTON4;
 			}
 			else
 			{
 				gpioSet(GPIO_LED_4, 1);
 				byLedAct[4] = 0;
+				byButState &= ~BUTTON4;
 
 			}
 		}
@@ -147,10 +159,6 @@ void vUITask( void *pvParameters )
 		dwADC[0] = dwADC[0] / 4;
 		dwADC[1] = dwADC[1] / 4;
 		dwADC[2] = dwADC[2] / 4;
-
-		/*byaDmxData[21] = dwADC[0];
-		byaDmxData[22] = dwADC[1];
-		byaDmxData[23] = dwADC[2];*/
 
 		gwinProgressbarSetPosition(ghBarRed, dwADC[0]);
 		gwinProgressbarSetPosition(ghBarGreen, dwADC[1]);
@@ -223,6 +231,11 @@ int8_t uiReadEncoder(void)
 }
 
 /* BUTTONS *******************************************************************/
+uint8_t uiGetButtonStates(void)
+{
+	return byButState;
+}
+
 uint8_t uiDebounceButtons(void)
 {
 	static uint8_t byaBut[3] = {0};
@@ -328,56 +341,56 @@ static void uiCheckButtons(void)
 		}
 
 	if(byButtons & 0x04)
+	{
+		if(sState.Key2 == 0 && sKeys.Key2 == 0)
 		{
-			if(sState.Key2 == 0 && sKeys.Key2 == 0)
-			{
-				sKeys.Key2 = 1;
-				sState.Key2 = 1;
-			}
+			sKeys.Key2 = 1;
+			sState.Key2 = 1;
 		}
-		else
-		{
-			sState.Key2 = 0;
-		}
+	}
+	else
+	{
+		sState.Key2 = 0;
+	}
 
 	if(byButtons & 0x08)
+	{
+		if(sState.Key3 == 0 && sKeys.Key3 == 0)
 		{
-			if(sState.Key3 == 0 && sKeys.Key3 == 0)
-			{
-				sKeys.Key3 = 1;
-				sState.Key3 = 1;
-			}
+			sKeys.Key3 = 1;
+			sState.Key3 = 1;
 		}
-		else
-		{
-			sState.Key3 = 0;
-		}
+	}
+	else
+	{
+		sState.Key3 = 0;
+	}
 
 	if(byButtons & 0x10)
+	{
+		if(sState.Key4 == 0 && sKeys.Key4 == 0)
 		{
-			if(sState.Key4 == 0 && sKeys.Key4 == 0)
-			{
-				sKeys.Key4 = 1;
-				sState.Key4 = 1;
-			}
+			sKeys.Key4 = 1;
+			sState.Key4 = 1;
 		}
-		else
-		{
-			sState.Key4 = 0;
-		}
+	}
+	else
+	{
+		sState.Key4 = 0;
+	}
 
 	if(byButtons & 0x20)
+	{
+		if(sState.KeyEnter == 0 && sKeys.KeyEnter == 0)
 		{
-			if(sState.KeyEnter == 0 && sKeys.KeyEnter == 0)
-			{
-				sKeys.KeyEnter = 1;
-				sState.KeyEnter = 1;
-			}
+			sKeys.KeyEnter = 1;
+			sState.KeyEnter = 1;
 		}
-		else
-		{
-			sState.KeyEnter = 0;
-		}
+	}
+	else
+	{
+		sState.KeyEnter = 0;
+	}
 }
 
 
