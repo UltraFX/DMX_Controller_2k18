@@ -14,6 +14,7 @@ void uiIntCallback(void);
 uint8_t uiGetButtonStates(void);
 uint8_t uiDebounceButtons(void);
 uint8_t uiGetButton(uint8_t byButton);
+uint8_t uiGetButtonLong(uint8_t byButton);
 
 int8_t uiReadEncoder(void);
 

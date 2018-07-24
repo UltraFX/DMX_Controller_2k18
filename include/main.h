@@ -42,4 +42,14 @@
 
 #define useFreeRTOS	1
 
+extern QueueHandle_t xDebugQueue;
+
+typedef struct
+{
+	portBASE_TYPE xMessageType;
+	signed char *pcMessage;
+	uint16_t wLength;
+} xDebugMessage;
+
+
 #endif

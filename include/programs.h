@@ -4,8 +4,11 @@
 typedef enum
 {
 	PROG_IDLE = 0,
+	PROG_BLACKOUT,
 	PROG_MOOD,
-	PROG_TRANSITION
+	PROG_MOOD_DELAY,
+	PROG_TRANSITION,
+	PROG_MANUAL
 } prog_state_t;
 
 typedef struct
@@ -31,5 +34,6 @@ extern void progCallback(void);
 
 extern void progSetColor(rgb_t sCol);
 extern void progSetWhite(uint8_t byVal);
+extern uint8_t progSetScene(uint8_t byScene);
 
 #endif

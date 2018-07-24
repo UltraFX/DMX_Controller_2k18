@@ -74,7 +74,7 @@ static void dmx_send(void)
     case BREAK:
     	uartBreakRate();
 		uartDmxSendByte(0);
-		//while(UARTBusy(UART0_BASE));
+		while(uartBusy());
 		byDmxState = STARTBIT;
 		break;
 

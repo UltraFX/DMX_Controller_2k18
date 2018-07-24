@@ -24,7 +24,7 @@ static bool_t _createPageDisplay_Page(void)
 	wi.g.x = 0;
 	wi.g.y = 0;
 	wi.g.width = 128;
-	wi.g.height = 128;
+	wi.g.height = 80;
 	wi.g.parent = 0;
 	wi.text = "Container";
 	wi.customDraw = 0;
@@ -76,7 +76,7 @@ static bool_t _createPageDisplay_Page(void)
 	ghBarBlue = gwinProgressbarCreate(0, &wi);
 	gwinProgressbarSetRange(ghBarBlue, 0, 255);
 	gwinProgressbarSetPosition(ghBarBlue, 0);
-
+	
 	return TRUE;
 }
 
@@ -111,6 +111,11 @@ void guiShowPage(guiPage page)
 	switch (page) {
 		case DISPLAY_PAGE:
 			gwinShow(ghContainer);
+			gdispDrawBox(3, 80, 122, 25, White);
+			gdispDrawBox(3, 80, 122, 25, Red);
+
+			gdispDrawString(5, 85, "Speichern", font, Black);
+			gdispDrawString(5, 110, "Zurueck", font, Black);
 			break;
 		case MAIN_PAGE:
 			gwinShow(ghMainContainer);

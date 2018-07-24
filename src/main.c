@@ -7,6 +7,7 @@
 #include "main.h"
 //#include "_write.h"
 
+QueueHandle_t xDebugQueue;
 
 static void vDebugTask( void *pvParameters );
 static void vStorageTask(void *pvParameters);
@@ -24,14 +25,11 @@ int main (void)
 	uartInit();
 	spiInit(10000000);
 
-
-	/*gfxInit();
-	guiInit();
-	guiShowPage(DISPLAY_PAGE);*/
+	xDebugQueue = xQueueCreate(3, sizeof(xDebugMessage));
 
 	xTaskCreate(vStorageTask, "Storage", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL);
 	xTaskCreate(vDebugTask, "DEBUG", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, NULL);
-	xTaskCreate(vUITask, "UI", 256, NULL, tskIDLE_PRIORITY + 1, NULL);
+	xTaskCreate(vUITask, "UI", 265, NULL, tskIDLE_PRIORITY + 1, NULL);
 	xTaskCreate(vDMXTask, "DMX", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
 
 	/* Start the scheduler. */
@@ -45,30 +43,17 @@ static void vDebugTask( void *pvParameters )
 	uint8_t byState = 0;
 	uint8_t byData[10] = {0};
 
+	xDebugMessage xMessage;
+
 	i2cInit();
-
-	/*byState = i2c_eeprom_write_byte(5, 0x55);
-	i2c_wait_eeprom();
-	byState = i2c_eeprom_write_byte(6, 0x55);
-	i2c_wait_eeprom();
-	uartSendString("Byte geschrieben: ", 18);
-	uartSendByte(byState);
-	uartSendByte('\n');
-
-	byState = i2c_eeprom_read(0, byData, 10);
-	uartSendString("Gelesen: ", 9);
-	uartSendByte(byState);
-	uartSendByte(' ');
-	uartSendByte(byData[4]);
-	uartSendByte('\n');*/
 
 	while(1)
 	{
-			/*uartSendByte((uint8_t)(dwADC[0]>>8));
-			uartSendByte((uint8_t)(dwADC[0]&0xff));*/
-			uartSendString("Hello World!\n", 13);
-
-			vTaskDelay(1000);
+		while(xQueueReceive(xDebugQueue, &xMessage, portMAX_DELAY) != pdPASS)
+		{
+			;
+		}
+		uartSendString(xMessage.pcMessage, xMessage.wLength);
 	}
 
 	(void)pvParameters;
@@ -82,11 +67,11 @@ static void vStorageTask(void *pvParameters)
 
 	i2cInit();
 
-	byState = i2c_eeprom_read_byte(0, &byCheck);
+	byState = i2c_eeprom_read_byte(VERSION_AREA, &byCheck);
 
 	if(byState == 0)
 	{
-		if(byCheck != 0x55) //no init
+		if(byCheck != VERSION) //no init
 		{
 			byState = i2c_eeprom_write_byte(0, 0x55);
 			i2c_wait_eeprom();

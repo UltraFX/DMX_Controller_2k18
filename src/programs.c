@@ -13,13 +13,14 @@ static prog_state_t eCurrState = PROG_IDLE;
 static rgb_t sSoll[5]= {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
 static void progMoodlight(void);
+static void progDelMoodlight(void);
 static uint8_t progTransition(void);
-
-static uint8_t progTransition(void);
+static void prog_manual(void);
 static uint8_t progCalcTransition(uint8_t byDevice, rgb_t sSoll);
 
 static hsv_t progRGB2HSV(rgb_t sVal);
 static rgb_t progHSV2RGB(hsv_t sVal);
+static void progSetColorAll(rgb_t sColor);
 
 void progSet(prog_state_t eState)
 {
@@ -33,18 +34,68 @@ prog_state_t progGet(void)
 
 void progHandler(void)
 {
+	uint8_t byI;
+	static uint8_t byInit = 0;
+	hsv_t sColorHSV = {0, 255, 255};
+
 	switch(eCurrState)
 	{
 	case PROG_IDLE:
+		byInit = 0;
+		break;
+	case PROG_BLACKOUT:
+		for(byI = 0; byI < 5; byI++)
+		{
+			sSoll[byI] = (rgb_t){0,0,0};
+		}
+		progSet(PROG_TRANSITION);
 		break;
 	case PROG_MOOD:
-		progMoodlight();
+		if(byInit == 0)
+		{
+			for(byI = 0; byI < 5; byI++)
+			{
+				sSoll[byI] = (rgb_t){255,0,0};
+			}
+			if(progTransition() == 0)
+			{
+				byInit = 1;
+			}
+		}
+		else
+		{
+			progMoodlight();
+		}
+		break;
+	case PROG_MOOD_DELAY:
+		if(byInit == 0)
+		{
+			for(byI = 0; byI < 5; byI++)
+			{
+				sColorHSV.wHue = byI * COLOR_SHIFT;
+				sSoll[byI] = progHSV2RGB(sColorHSV);
+			}
+			if(progTransition() == 0)
+			{
+				byInit = 1;
+			}
+		}
+		else
+		{
+			progDelMoodlight();
+		}
 		break;
 	case PROG_TRANSITION:
 		if(progTransition() == 0)
 		{
 			eCurrState = PROG_IDLE;
 		}
+		break;
+	case PROG_MANUAL:
+		prog_manual();
+		break;
+	default:
+		eCurrState = PROG_IDLE;
 		break;
 	}
 }
@@ -67,7 +118,40 @@ static void progMoodlight(void)
 		}
 
 		sColor = progHSV2RGB(sMood);
-		dmxSetRGB(2, sColor);
+		progSetColorAll(sColor);
+	}
+}
+
+static void progDelMoodlight(void)
+{
+	static uint32_t dwLimit = 0;
+	rgb_t sColor = {0,0,0};
+	uint8_t byCnt = 0;
+	static hsv_t sMood[5] =
+		{
+			{0, 255, 255},
+			{COLOR_SHIFT, 255, 255},
+			{2*COLOR_SHIFT, 255, 255},
+			{3*COLOR_SHIFT, 255, 255},
+			{4*COLOR_SHIFT, 255, 255}
+		};
+
+	if(dwTime > dwLimit)
+	{
+		dwLimit = dwTime + 100;
+
+		for(byCnt = 0; byCnt < 5; byCnt++)
+		{
+			sMood[byCnt].wHue ++;
+
+			if(sMood[byCnt].wHue >= 360)
+			{
+				sMood[byCnt].wHue = 0;
+			}
+
+			sColor = progHSV2RGB(sMood[byCnt]);
+			dmxSetRGB(byCnt, sColor);
+		}
 	}
 }
 
@@ -75,35 +159,63 @@ static uint8_t progTransition(void)
 {
 	static uint8_t byState = 0;
 	static uint32_t dwLimit = 0;
+	uint8_t byCnt = 0;
 	uint8_t byButState = uiGetButtonStates();
 
 	if(byState == 0)
 	{
-		byState = 1;
+		byState = 0x1F;
 	}
 
 	if(dwTime > dwLimit)
 	{
 		dwLimit = dwTime + 2;
 
-		if(byButState & BUTTON0)
+		for(byCnt = 0; byCnt < 5; byCnt++)
 		{
-			if(progCalcTransition(0, sSoll[0]) == 3)
+			if(progCalcTransition(byCnt, sSoll[byCnt]) == 3)
 			{
-				byState = 0;
+				byState &= ~(1 << byCnt);
 			}
-		}
 
-		if(byButState & BUTTON2)
-		{
-			if(progCalcTransition(2, sSoll[2]) == 3)
-			{
-				byState = 0;
-			}
+//			if((byButState & (1 << byCnt)) != 0)
+//			{
+//				if(progCalcTransition(byCnt, sSoll[byCnt]) == 3)
+//				{
+//					byState = 0;
+//				}
+//			}
 		}
 	}
 
 	return byState;
+}
+
+static void prog_manual(void)
+{
+
+}
+
+uint8_t progSetScene(uint8_t byScene)
+{
+    uint8_t byCnt;
+    uint8_t byRet = 0;
+    uint8_t byAddr;
+
+    for(byCnt = 0; byCnt < 5; byCnt++)
+    {
+        byAddr = SCENES_AREA + ((byScene + byCnt) * 4);
+        sSoll[byCnt] = menuEepReadColor(byAddr);
+
+//        if(byRet != 0)
+//        {
+//            return 1;
+//        }
+    }
+
+    eCurrState = PROG_TRANSITION;
+
+    return 0;
 }
 
 static uint8_t progCalcTransition(uint8_t byDevice, rgb_t sSoll)
@@ -166,8 +278,17 @@ void progCallback(void)
 
 void progSetColor(rgb_t sCol)
 {
-	//dmxSetRGB(2, (rgb_t)sCol);
-	sSoll[2] = sCol;
+	uint8_t byI = 0;
+	uint8_t byBut = uiGetButtonStates();
+
+	for(byI = 0; byI < 5; byI++)
+	{
+		if((byBut & (1 << byI)) != 0)
+		{
+			sSoll[byI] = sCol;
+		}
+	}
+
 	eCurrState = PROG_TRANSITION;
 }
 
@@ -320,6 +441,15 @@ static hsv_t progRGB2HSV(rgb_t sVal)
 	sRet.byVal= (uint8_t)(v * 255.0);
 
 return sRet;
+}
+
+static void progSetColorAll(rgb_t sColor)
+{
+	dmxSetRGB(0, sColor);
+	dmxSetRGB(1, sColor);
+	dmxSetRGB(2, sColor);
+	dmxSetRGB(3, sColor);
+	dmxSetRGB(4, sColor);
 }
 
 
