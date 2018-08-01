@@ -7,22 +7,22 @@
 
 #include "main.h"
 
-static uint8_t uiGetButtons(void);
-static void uiCheckButtons(void);
+/* local Function variables **************************************/
 
-static void uiCheckEncoder(void);
+volatile uint8_t byButtons = 0; /**< debounced physical button states */
+volatile uint16_t wTime = 0;	/**< timing variable from timer callback (1 ms) for delays */
+volatile uint32_t dwTick = 0;	/**< timing variable from timer callback (1 ms) for delays */
 
-volatile uint8_t byButtons = 0;
-volatile uint16_t wTime = 0;
-volatile uint32_t dwTick = 0;
+static int8_t iLastVal = 0;		/**< old encoder value */
+static int8_t iEnc_delta = 0;	/**< value difference between the two encoder inputs */
 
-static int8_t iLastVal = 0;
-static int8_t iEnc_delta = 0;
+static uint8_t byButState = 0;	/**< variable for logical button state */
 
-static uint8_t byButState = 0;
+static const int16_t iaTable[16] = {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0}; /**< LUT for encoder values */
 
-static const int16_t iaTable[16] = {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0};
+uint32_t dwADC[3];					/**< ADC values for the 3 faders */
 
+/* Key definitions */
 struct
 {
 	unsigned Key0:1;
@@ -53,120 +53,100 @@ struct
 	unsigned KeyEnter:1;
 } sLong;
 
+/* local Function prototypes **************************************/
+
+/**
+*	@brief get button states
+*
+*	@return button states, encoded in 8-bit value
+*/
+static uint8_t uiGetButtons(void);
+
+/**< @brief read physical button states ad debounce */
+static void uiCheckButtons(void);
+
+/**
+*	@brief read physical input stated and average them to avoid bouncing
+*
+*	@return	debounced input states
+*/
+static uint8_t uiDebounceButtons(void);
+
+/**< brief read physical state of rotary encoder */
+static void uiCheckEncoder(void);
+
 void vUITask( void *pvParameters )
 {
 	(void)pvParameters;
-	uint32_t dwADC[3];
-	static uint8_t byLedAct[5] = {0};
+	static uint8_t byLedAct[5] = {0};	/**< LEDs on or off */
+	uint8_t byCnt = 0;					/**< counting variable for for-loops */
+	const uint8_t byaLEDs[5] = 			/**< individual IDs for the LEDs */
+	{
+		GPIO_LED_0,
+		GPIO_LED_1,
+		GPIO_LED_2,
+		GPIO_LED_3,
+		GPIO_LED_4
+	};
 
+	/* init peripherals for UI */
 	timerMainInit();
 	timerPWMInit();
 	adcInit();
-	//pwmInit();
+	
+	/* init pseudo random generator */
+	srand((unsigned) timerGetVal());
 
+	/* init display library */
 	gfxInit();
 
 	guiInit();
+	
+	/* init user menu */
 	menu_init();
 
+#warning PWM setting for background light
 	timerPWMSet(80);
 
 
 	while(1)
 	{
+		/* read out voltaged of the 3 faders */
 		adcRead(dwADC);
+		
+		/* update menu state machine */
 		menu_handler();
+		
+		/* update program state machine */
 		progHandler();
 
-		if(uiGetButton(BUTTON0) == 1)
+		/* check if button was pressed and enable or disable LED (and channel activation) */
+		for(byCnt = 0; byCnt < 5; byCnt++)
 		{
-			if(byLedAct[0] == 0)
+			if(uiGetButton(1 << byCnt) == 1)
 			{
-				gpioSet(GPIO_LED_0, 0);
-				byLedAct[0] = 1;
-				byButState |= BUTTON0;
-			}
-			else
-			{
-				gpioSet(GPIO_LED_0, 1);
-				byLedAct[0] = 0;
-				byButState &= ~BUTTON0;
+				if(byLedAct[byCnt] == 0)
+				{
+					gpioSet(byaLEDs[byCnt], 0);
+					byLedAct[byCnt] = 1;
+					byButState |= (1 << byCnt);
+				}
+				else
+				{
+					gpioSet(byaLEDs[byCnt], 1);
+					byLedAct[byCnt] = 0;
+					byButState &= ~(1 << byCnt);
 
+				}
 			}
 		}
 
-		if(uiGetButton(BUTTON1) == 1)
-		{
-			if(byLedAct[1] == 0)
-			{
-				gpioSet(GPIO_LED_1, 0);
-				byLedAct[1] = 1;
-				byButState |= BUTTON1;
-			}
-			else
-			{
-				gpioSet(GPIO_LED_1, 1);
-				byLedAct[1] = 0;
-				byButState &= ~BUTTON1;
+		/* adc is 12 bit, but DMX-values are only 8-Bit -> divide by 4 */
+		dwADC[0] = dwADC[0] >> 2;
+		dwADC[1] = dwADC[1] >> 2;
+		dwADC[2] = dwADC[2] >> 2;
 
-			}
-		}
-
-		if(uiGetButton(BUTTON2) == 1)
-		{
-			if(byLedAct[2] == 0)
-			{
-				gpioSet(GPIO_LED_2, 0);
-				byLedAct[2] = 1;
-				byButState |= BUTTON2;
-			}
-			else
-			{
-				gpioSet(GPIO_LED_2, 1);
-				byLedAct[2] = 0;
-				byButState &= ~BUTTON2;
-
-			}
-		}
-
-		if(uiGetButton(BUTTON3) == 1)
-		{
-			if(byLedAct[3] == 0)
-			{
-				gpioSet(GPIO_LED_3, 0);
-				byLedAct[3] = 1;
-				byButState |= BUTTON3;
-			}
-			else
-			{
-				gpioSet(GPIO_LED_3, 1);
-				byLedAct[3] = 0;
-				byButState &= ~BUTTON3;
-
-			}
-		}
-
-		if(uiGetButton(BUTTON4) == 1)
-		{
-			if(byLedAct[4] == 0)
-			{
-				gpioSet(GPIO_LED_4, 0);
-				byLedAct[4] = 1;
-				byButState |= BUTTON4;
-			}
-			else
-			{
-				gpioSet(GPIO_LED_4, 1);
-				byLedAct[4] = 0;
-				byButState &= ~BUTTON4;
-
-			}
-		}
-
-		dwADC[0] = dwADC[0] / 4;
-		dwADC[1] = dwADC[1] / 4;
-		dwADC[2] = dwADC[2] / 4;
-
+		/* update progressbars for manual menu according to new fader positions */ 
 		gwinProgressbarSetPosition(ghBarRed, dwADC[0]);
 		gwinProgressbarSetPosition(ghBarGreen, dwADC[1]);
 		gwinProgressbarSetPosition(ghBarBlue, dwADC[2]);
@@ -175,12 +155,9 @@ void vUITask( void *pvParameters )
 	}
 }
 
+/* Function definitions **************************************/
 void uiIntCallback(void)
 {
-
-	/*byButtons = uiDebounceButtons();
-	uiCheckButtons();*/
-
 	wTime++;
 	dwTick++;
 	uiCheckEncoder();
@@ -192,24 +169,6 @@ void uiIntCallback(void)
 		wTime = 0;
 	}
 }
-
-/* DISPLAY *******************************************************************/
-/*void uiCreateMainMenu(void)
-{
-	gdispDrawBox(3, 3, 122, 25, White);
-	gdispDrawBox(3, 3, 122, 25, Red);
-
-	gdispDrawString(5, 10, "Programme", font, Black);
-
-	gdispDrawString(5, 30, "Farbwahl", font, Black);
-
-	gdispDrawString(5, 50, "Manuell", font, Black);
-
-	gdispDrawString(5, 70, "Einstellungen", font, Black);
-
-	gdispFillArea(0, 107, 128, 20, Blue);
-//	gdispDrawBox(3,3, 125, 30, Blue);
-}*/
 
 /* ENCODER *******************************************************************/
 static void uiCheckEncoder(void)
@@ -238,13 +197,25 @@ int8_t uiReadEncoder(void)
 	return iRet;
 }
 
+/* FADER *******************************************************************/
+rgb_t uiReadFader(void)
+{
+	rgb_t sRet;
+
+	sRet.byR = (uint8_t)(dwADC[0]);
+	sRet.byG = (uint8_t)(dwADC[1]);
+	sRet.byB = (uint8_t)(dwADC[2]);
+
+	return sRet;
+}
+
 /* BUTTONS *******************************************************************/
 uint8_t uiGetButtonStates(void)
 {
 	return byButState;
 }
 
-uint8_t uiDebounceButtons(void)
+static uint8_t uiDebounceButtons(void)
 {
 	static uint8_t byaBut[3] = {0};
 	static uint8_t byCnt = 0;

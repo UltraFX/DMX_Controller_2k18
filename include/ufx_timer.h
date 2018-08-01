@@ -11,5 +11,6 @@ void timerPWMSet(uint8_t byVal);
 
 void timerDelayMS(uint32_t dwDelay);
 uint16_t timerGetTick(void);
+uint16_t timerGetVal(void);
 
 #endif

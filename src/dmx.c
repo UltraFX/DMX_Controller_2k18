@@ -16,16 +16,18 @@ enum
 	DMXDATA
 };
 
-volatile uint8_t byaDmxData[DMX_CHANNELS] = {0};
-static uint8_t byaDeviceID[5] = {0};
+volatile uint8_t byaDmxData[DMX_CHANNELS] = {0}; /**< this local array contains all DMX data for one universe */
+static uint8_t byaDeviceID[5] = {0};			 /**< start addresses of the 5 lamps */
 
+/** 
+*	@brief statemachine for DMX protocoll. Should be called in endless loop of main or task
+*/
 static void dmx_send(void);
 
 void vDMXTask( void *pvParameters )
 {
 	while(1)
 	{
-		//progHandler();
 		dmx_send();
 		vTaskDelay(1);
 	}
@@ -64,29 +66,34 @@ void dmxSetWhite(uint8_t byDevice, uint8_t byVal)
 //DMX Sende-Routine
 static void dmx_send(void)
 {
-	static uint8_t byDmxState = BREAK;
-	static uint16_t wDmxNum = 0;
+	static uint8_t byDmxState = BREAK; /**< current DMX state */
+	static uint16_t wDmxNum = 0;	   /**< counter for current DMX data */
 
-    // DMX-Daten senden
+    /* read DMX-Data from UART */
     switch(byDmxState)
 	{
-    // BREAK erzeugen
-    case BREAK:
-    	uartBreakRate();
+    case BREAK:									/**< generate BREAK */
+    	/* change UART data rate to provoke Framing Error */
+		uartBreakRate();
+		/* send dummy byte */
 		uartDmxSendByte(0);
+		/* wait for end of transmission */
 		while(uartBusy());
+		/* go to STARTBIT state */
 		byDmxState = STARTBIT;
 		break;
-
-	// Startbit senden
-	case STARTBIT:
+	case STARTBIT:								/**< send Startbit */
+		/* change UART data rate back to 250 kbit/s */
 		uartDMXRate();
+		/* send 0 */
 		uartDmxSendByteNonBlocking(0);
+		/* go to DMXDATA state */
 		byDmxState = DMXDATA;
 		break;
-
-	//DMX Daten senden
-	case DMXDATA:
+#warning OPTIMIZE THIS!
+	case DMXDATA:								/** send DMX data */
+	
+		/* send until all 512 bytes are transmitted... */
 		if(wDmxNum < DMX_CHANNELS)
 		{
 			for(wDmxNum = 0; wDmxNum < DMX_CHANNELS; wDmxNum++)
@@ -95,6 +102,7 @@ static void dmx_send(void)
 				while(uartBusy());
 			}
 		}
+		/* ...then go back to BREAK state */
 		else
 	    {
 			wDmxNum = 0;

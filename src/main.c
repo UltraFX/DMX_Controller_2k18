@@ -14,13 +14,13 @@ static void vStorageTask(void *pvParameters);
 
 int main (void)
 {
-	/* Clock per PLL auf max (50 MHz) */
+	/* Set Clock via PLL to max (50 MHz) */
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_8MHZ | SYSCTL_OSC_MAIN);
 
-	//Interrupts global aktivieren
+	/* enable global Interrupts */
 	IntMasterEnable();
 
-	//timerMainInit();
+	/* initialize peripherals */
 	gpioInit();
 	uartInit();
 	spiInit(10000000);

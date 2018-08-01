@@ -76,6 +76,11 @@ uint16_t timerGetTick(void)
 	return (uint16_t)dwTick;
 }
 
+uint16_t timerGetVal(void)
+{
+	return TimerValueGet(TIMER1_BASE, TIMER_A);
+}
+
 static void MainTimHandler(void)
 {
 	TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
