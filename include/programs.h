@@ -71,4 +71,12 @@ extern void progSetWhite(uint8_t byVal);
 */
 extern uint8_t progSetScene(uint8_t byScene);
 
+/**
+ * @brief set transmission and wait speed for programs in the menu
+ *
+ * @param[in]	byType		program speed [0] or wait speed [1]
+ * @param[in]	bySpeed		speed [0 - 2];
+ */
+extern void progSetSpeed(uint8_t byType, uint8_t bySpeed);
+
 #endif

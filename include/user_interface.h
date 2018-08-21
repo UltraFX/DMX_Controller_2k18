@@ -55,4 +55,11 @@ uint8_t uiGetButtonLong(uint8_t byButton);
 */
 int8_t uiReadEncoder(void);
 
+/**
+*	@brief return encoder state
+*
+*	@return 	encoder state
+*/
+int8_t uiGetEncoder(void);
+
 #endif

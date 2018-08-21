@@ -7,21 +7,28 @@
 
 #include "main.h"
 
+/* local definitions **********************************************/
+#define TYPE_NORMAL	1
+#define TYPE_MAN	2
+#define TYPE_PROMPT 3
+
 /* local Function prototypes **************************************/
 
 /**
 *	@brief move the blue frame from one menu item to the next, when encoder changes position
 *
-*	@param[in]	byPos	new position for the blue frame (0-4)
+*	@param[in]	byPos		new position for the blue frame (0-4)
+*	@param[in]	byType 		menu type (normal dropdown or manual/prompt
+*	@param[in]	byNewMenu	determine if new menu layer has been entered or not
 */
-static void menu_refresh(uint8_t byPos);
+static void menu_refresh(uint8_t byPos, uint8_t byType, uint8_t byNewMenu);
 
-/**
-*	@brief same as menu_refresh(), but for the manual color menu (fader), because it has only 2 items below the 3 color progressbars
-*
-*	@param[in]	byPos	new position for the blue frame (0-1)
-*/
-static void menu_manual_refresh(uint8_t byPos);
+// /**
+// *	@brief same as menu_refresh(), but for the manual color menu (fader), because it has only 2 items below the 3 color progressbars
+// *
+// *	@param[in]	byPos	new position for the blue frame (0-1)
+// */
+// static void menu_manual_refresh(uint8_t byPos);
 
 /**
  * 	@brief refresh selection between "Ja" and "Nein"
@@ -56,8 +63,18 @@ static void setScene(void);
 /**< @brief start a selected program */
 static void progAct(void);
 
-/** @brief set the speed for program-steps from the settings menu */
+/**< @brief set the speed for program-steps from the settings menu */
 static void setSpeed(void);
+
+/**< @brief get current encoder value */
+//static void menu_update_encoder(void);
+
+/**
+*	@brief menu navigation routine (encoder movement)
+*
+*	@param[in]	byType	Normal or Manual/Prompt menu
+*/
+static void menu_nav_menu(uint8_t byType);
 
 /* menu structures ************************************************/
 
@@ -169,6 +186,7 @@ static element_t sColor1Menu[] =
 	{ELEM_BLUE, 	"Blau", 		0, 0, MENU_NONE, setColor},
 	{ELEM_WHITE, 	"Weiss", 		0, 0, MENU_NONE, setColor},
 	{ELEM_MORE, 	"Weiter", 		0, 0, MENU_COL2, NULL},
+	{ELEM_BACK, 	"Zurueck", 		0, 0, MENU_MAIN, NULL}
 };
 
 static element_t sColor2Menu[] =
@@ -176,7 +194,7 @@ static element_t sColor2Menu[] =
 	{ELEM_MAG, 		"Magenta", 		1, 0, MENU_NONE, setColor},
 	{ELEM_CYAN, 	"Cyan", 		0, 0, MENU_NONE, setColor},
 	{ELEM_YEL, 		"Gelb", 		0, 0, MENU_NONE, setColor},
-	{ELEM_BACK, 	"Zurueck", 		0, 0, MENU_MAIN, NULL},
+	{ELEM_BACK, 	"Zurueck", 		0, 0, MENU_MAIN, NULL}
 };
 
 static element_t sUserCol[] =
@@ -191,11 +209,11 @@ static element_t sUserCol[] =
 
 static element_t sScenes[] =
 {
-	{ELEM_SCENE_1, "SZENE 1", 1, 1, MENU_NONE, setScene},
-	{ELEM_SCENE_2, "SZENE 2", 1, 1, MENU_NONE, setScene},
-	{ELEM_SCENE_3, "SZENE 3", 1, 1, MENU_NONE, setScene},
-	{ELEM_SCENE_4, "SZENE 4", 1, 1, MENU_NONE, setScene},
-	{ELEM_BACK,   "Zurueck",  0, 0, MENU_MAIN, NULL}
+	{ELEM_SCENE_1, "SZENE 1", 	1, 1, MENU_NONE, setScene},
+	{ELEM_SCENE_2, "SZENE 2", 	1, 1, MENU_NONE, setScene},
+	{ELEM_SCENE_3, "SZENE 3", 	1, 1, MENU_NONE, setScene},
+	{ELEM_SCENE_4, "SZENE 4", 	1, 1, MENU_NONE, setScene},
+	{ELEM_BACK,   	"Zurueck",  0, 0, MENU_MAIN, NULL}
 };
 
 static element_t sSetup[] =
@@ -203,7 +221,8 @@ static element_t sSetup[] =
 	{ELEM_SPEED_PROG, 	"Geschw. Prog.",	0, 0, 	MENU_SPEED_PROG, 	NULL},
 	{ELEM_SPEED_CHG, 	"Geschw. Wechs.",	0, 0,  	MENU_SPEED_CHG, 	NULL},
 	{ELEM_DMX_ADDR, 	"DMX-Addr",			0, 0,	MENU_ADDR, 			NULL},
-	{ELEM_DISP, 		"Display.", 		0, 0,	MENU_DISP, 			NULL}
+	{ELEM_DISP, 		"Display.", 		0, 0,	MENU_DISP, 			NULL},
+	{ELEM_BACK,   		"Zurueck",  		0, 0, 	MENU_MAIN, 			NULL}
 };
 
 static element_t sSpeed[] =
@@ -211,20 +230,20 @@ static element_t sSpeed[] =
 	{ELEM_SPEED_SLO, 	"Langsam", 	1, 0,	MENU_NONE, 	setSpeed},
 	{ELEM_SPEED_MED, 	"Normal", 	1, 0,   MENU_NONE, 	setSpeed},
 	{ELEM_SPEED_HI, 	"Schnell",  1, 0,	MENU_NONE, 	setSpeed},
-	{ELEM_BACK, 		"Schnell",  1, 0,	MENU_NONE, 	setSpeed}
+	{ELEM_BACK,   		"Zurueck",  0, 0, 	MENU_SET, 	NULL}
 };
 
 static menu_t sMenu[] =
 {
 	{MENU_MAIN, 		"Hauptmenue",		5, 0, sMainMenu},
 	{MENU_PROG, 		"Programme", 		6, 0, sProgramMenu},
-	{MENU_COL1, 		"Farben1", 			5, 0, sColor1Menu},
+	{MENU_COL1, 		"Farben1", 			6, 0, sColor1Menu},
 	{MENU_COL2, 		"Farben2", 			4, 0, sColor2Menu},
 	{MENU_USER,			"Benutzerdefiniert",6, 0, sUserCol},
 	{MENU_SCENE,    	"Szenen",			5, 0, sScenes},
-	{MENU_SET,    		"Einstellungen",	4, 0, sSetup},
-	{MENU_SPEED_PROG,	"Geschwindigkeit",	3, 0, sSpeed},
-	{MENU_SPEED_CHG,	"Geschwindigkeit",	3, 0, sSpeed}
+	{MENU_SET,    		"Einstellungen",	5, 0, sSetup},
+	{MENU_SPEED_PROG,	"Geschwindigkeit",	4, 0, sSpeed},
+	{MENU_SPEED_CHG,	"Geschwindigkeit",	4, 0, sSpeed}
 };
 
 /* menu states *****************************************************/
@@ -234,17 +253,45 @@ typedef enum
 	STATE_IDLE,
 	STATE_SETTABLE,
 	STATE_MANUAL,
-	STATE_PROMPT
+	STATE_PROMPT,
+	STATE_STORE_SCENE,
+	STATE_STORE_COLOR
 }menu_state_t;
 
 /* local variables *************************************************/
-static menu_t *psCurrentMenu; /**< currently active menu structure */
+static menu_t *psCurrentMenu; 				/**< currently active menu structure */
 
-static menu_state_t eState = STATE_INIT; /**< current menu state */
+static menu_state_t eState = STATE_INIT; 	/**< current menu state */
+
+static uint8_t byPosition = 0;				/**< current position in dropdown menu */
+static uint8_t byPrePos = 0;
 
 font_t font, bigfont;
 
 /* Function definitions ********************************************/
+void vMenuTask( void *pvParameters )
+{
+	(void)pvParameters;
+	
+	/* init display library */
+	gfxInit();
+
+	guiInit();
+
+	menu_init();
+	
+	while(1)
+	{
+		/* handle menu state machine */
+		menu_handler();
+		
+		/* update program state machine */
+		progHandler();
+		
+		vTaskDelay(1);
+	}
+}
+
 void menu_init(void)
 {
 	/* initial menu: Main Menu */
@@ -257,237 +304,192 @@ void menu_init(void)
 
 void menu_handler(void)
 {
-	static int8_t iEncValue = 0; 				/**< encoder value */
 	static uint8_t byMenu = 0;					/**< current menu ID */
-    static uint8_t byPosition = 0;				/**< current position inside menu */
-    static uint8_t byLongPressed = 0;			/**< check if button has been pressed long */
     static rgb_t   sUserColor = {0,0,0};
     static uint8_t byUserNr = 0;
     uint8_t byTemp;
-    uint32_t dwADC[3];
+	uint8_t byCnt;
 
+#ifdef DEBUG_EN
 	xDebugMessage xMessage;						/* Debug messages */
-
+#endif
+	
 	/* get current encoder value */
-	iEncValue += uiReadEncoder();
-
+//	menu_update_encoder();
+	
 	switch(eState)
 	{
 	case STATE_INIT:														/**< menu initialization */
 		/* load main menu */
 		menu_display(byMenu);
 	    /* set red frame to first item */
-		menu_refresh(byPosition);
+		menu_refresh(byPosition, TYPE_NORMAL, 1);
 		eState = STATE_IDLE;
 		break;
 	case STATE_IDLE:														/**< default state; wait for user input */
 		/* Enter-Button pressed */
 		if(uiGetButton(BUTTON_ENTER) == 1)
 		{
-			if( byLongPressed != 0)
+			/* Enter-Button pressed long -> Switch to settable state */
+			if(psCurrentMenu->psElement[byPosition].bySettable == 1)
 			{
-				byLongPressed = 0;
+				eState = STATE_SETTABLE;
 			}
+			/* execute function */
+			if(psCurrentMenu->psElement[byPosition].pFunc != NULL)
+			{
+				psCurrentMenu->psElement[byPosition].pFunc();
+			}
+			/* load next menu item */
 			else
 			{
-				/* Enter-Button pressed long -> Switch to settable state */
-				if(psCurrentMenu->psElement[byPosition].bySettable == 1)
-				{
-					eState = STATE_SETTABLE;
-				}
-				/* execute function */
-				if(psCurrentMenu->psElement[byPosition].pFunc != NULL)
-				{
-					psCurrentMenu->psElement[byPosition].pFunc();
-				}
-				/* load next menu item */
-				else
-				{
-					menu_display(psCurrentMenu->psElement[byPosition].byNext);
-					menu_refresh(0);
-					byPosition = 0;
-				}
+				byPrePos = byPosition;
+				menu_display(psCurrentMenu->psElement[byPosition].byNext);
+				menu_refresh(0, TYPE_NORMAL, 1);
+				byPosition = 0;
+				//byPosition = byPrePos;
 			}
 		}
 
 		/* check encoder */
-		if(iEncValue <= -4)
-		{
-			if(byPosition > 0)
-			{
-				/* go up */
-				menu_refresh(--byPosition);
-			}
-			iEncValue = 0;
-		}
-
-		if(iEncValue >= 4)
-		{
-			if(byPosition < (psCurrentMenu->byNumElements-1))
-			{
-				/* go down */
-				menu_refresh(++byPosition);
-			}
-			iEncValue = 0;
-		}
+		menu_nav_menu(TYPE_NORMAL);
 		break;
 	case STATE_SETTABLE:													/**< active, when a menu is entered that contains changeable items (e.g. user colors or scenes) */
 		/* Enter-button pressed long */
 		if(uiGetButtonLong(BUTTON_ENTER) == 1)
 		{
-			byLongPressed = 1;
-
+			byUserNr = byPosition;
+			
+			/* If in user defined color menu and Enter pressed long */
 			if(psCurrentMenu->byID == MENU_USER)
 			{
-				byPosition = 0;
-				byUserNr = (psCurrentMenu->byID)-1;
+				byPosition = 0;				
 				eState = STATE_MANUAL;
 				progSet(PROG_MANUAL);
 				showMan();
 			}
+			
+			/* If in scene menu and Enter pressed long */
+			if(psCurrentMenu->byID == MENU_SCENE)
+			{
+				byPosition = 0;
+				showPrompt("Szene speichern?");
+				eState = STATE_STORE_SCENE;
+			}
+			
+#ifdef DEBUG_EN
 			xMessage.pcMessage = "Lang\n";
 			xMessage.wLength = 5;
 			xQueueSend(xDebugQueue, &xMessage, portMAX_DELAY);
+#endif
 		}
 		/* Enter-button pressed short */
 		else if(uiGetButton(BUTTON_ENTER) == 1)
-		{
-			if( byLongPressed != 0)
+		{				
+#ifdef DEBUG_EN
+			xMessage.pcMessage = "Kurz\n";
+			xMessage.wLength = 5;
+			xQueueSend(xDebugQueue, &xMessage, portMAX_DELAY);
+#endif
+			
+			/* short press: go back to regular idle state */
+			if(psCurrentMenu->psElement[byPosition].bySettable == 0)
 			{
-				byLongPressed = 0;
+				eState = STATE_IDLE;
 			}
+			/* execute function */
+			if(psCurrentMenu->psElement[byPosition].pFunc != NULL)
+			{
+				psCurrentMenu->psElement[byPosition].pFunc();
+			}
+			/* load next menu item */
 			else
 			{
-				xMessage.pcMessage = "Kurz\n";
-				xMessage.wLength = 5;
-				xQueueSend(xDebugQueue, &xMessage, portMAX_DELAY);
-
-				/* short press: go back to regular idle state */
-				if(psCurrentMenu->psElement[byPosition].bySettable == 0)
-				{
-					eState = STATE_IDLE;
-				}
-				/* execute function */
-				if(psCurrentMenu->psElement[byPosition].pFunc != NULL)
-				{
-					psCurrentMenu->psElement[byPosition].pFunc();
-				}
-				/* load next menu item */
-				else
-				{
-					menu_display(psCurrentMenu->psElement[byPosition].byNext);
-					menu_refresh(0);
-					byPosition = 0;
-				}
+				menu_display(psCurrentMenu->psElement[byPosition].byNext);
+				menu_refresh(0, TYPE_NORMAL, 0);
+				byPosition = 0;
 			}
 		}
 
 		/* check encoder */
-		if(iEncValue <= -4)
-		{
-			if(byPosition > 0)
-			{
-				/* go up */
-				menu_refresh(--byPosition);
-			}
-			iEncValue = 0;
-		}
-
-		if(iEncValue >= 4)
-		{
-			if(byPosition < (psCurrentMenu->byNumElements-1))
-			{
-				/* go down */
-				menu_refresh(++byPosition);
-			}
-			iEncValue = 0;
-		}
+		menu_nav_menu(TYPE_NORMAL);
 		break;
     /* UNDER CONSTRUCTION ****************************************/
-	case STATE_MANUAL:
-		if(iEncValue <= -4)
-		{
-			if(byPosition > 0)
-			{
-				menu_manual_refresh(0);
-				byPosition--;
-			}
-			iEncValue = 0;
-		}
-
-		if(iEncValue >= 4)
-		{
-			if(byPosition < 1)
-			{
-				menu_manual_refresh(1);
-				byPosition++;
-			}
-			iEncValue = 0;
-		}
-		
+	case STATE_MANUAL:		
 		if(uiGetButton(BUTTON_ENTER) == 1)
 		{
-			if( byLongPressed != 0)
+			if(byPosition == 0)
 			{
-				byLongPressed = 0;
+				/* double check before storing the new value */
+				sUserColor = uiReadFader();
+				showPrompt("Sicher?");
+				eState = STATE_STORE_COLOR;
 			}
 			else
 			{
-				if(byPosition == 0)
-				{
-					sUserColor = uiReadFader();
-					showPrompt("Sicher?");
-					eState = STATE_PROMPT;
-				}
-				else
-				{
-					menu_display(MENU_MAIN);
-					menu_refresh(3);
-					eState = STATE_IDLE;
-				}
+				/* return to user color menu */
+				menu_display(MENU_USER);
+				menu_refresh(byUserNr, TYPE_NORMAL, 0);
+				byPosition = byUserNr;
+				eState = STATE_SETTABLE;
 			}
 		}
+		
+		/* check encoder */
+		menu_nav_menu(TYPE_MAN);
 		break;
-	case STATE_PROMPT:
-		if(iEncValue <= -4)
-		{
-			if(byPosition > 0)
-			{
-				menu_prompt_refresh(0);
-				byPosition--;
-			}
-			iEncValue = 0;
-		}
-
-		if(iEncValue >= 4)
-		{
-			if(byPosition < 1)
-			{
-				menu_prompt_refresh(1);
-				byPosition++;
-			}
-			iEncValue = 0;
-		}
-
+	case STATE_STORE_SCENE:
+		/* yes */
 		if(uiGetButton(BUTTON_ENTER) == 1)
 		{
-			/* yes */
+			/* do only if no program is running */
+			if(byPosition == 0 && progGet() == PROG_IDLE)
+			{
+				/* get EEPROM address from currently selected menu item */
+				byTemp = SCENES_AREA+(4*5*byUserNr);
+				
+				/* do for all colors */
+				for(byCnt = 0; byCnt < 5; byCnt++)
+				{
+					/* get current color information from DMX-data */
+					sUserColor = dmxGetRGB(byCnt);
+					/* store in EEPROM */
+					menuEepWriteColor(byTemp, sUserColor);		
+					// (void)i2c_eeprom_write_byte(byTemp, sUserColor.byR);
+					// i2c_wait_eeprom();
+					byTemp += 4;
+				}
+			}
+			/* return to scene menu */
+			menu_display(MENU_SCENE);
+			menu_refresh(byUserNr, TYPE_NORMAL, 0);
+			byPosition = byUserNr;
+			eState = STATE_IDLE;
+		}
+		menu_nav_menu(TYPE_PROMPT);
+		break;
+	case STATE_STORE_COLOR:
+		/* yes */
+		if(uiGetButton(BUTTON_ENTER) == 1)
+		{
 			if(byPosition == 0)
 			{
-				//store value
+				/* store value */
 				byTemp = USER_AREA+(4*byUserNr);
-				(void)i2c_eeprom_write_byte(byTemp, sUserColor.byR);
-				i2c_wait_eeprom();
-				(void)i2c_eeprom_write_byte(byTemp+1, sUserColor.byG);
-				i2c_wait_eeprom();
-				(void)i2c_eeprom_write_byte(byTemp+2, sUserColor.byB);
-				i2c_wait_eeprom();
+				menuEepWriteColor(byTemp, sUserColor);
 			}
-			menu_display(MENU_MAIN);
-			menu_refresh(2);
+			/* return to user color menu */
+			menu_display(MENU_USER);
+			menu_refresh(byUserNr, TYPE_NORMAL, 0);
+			byPosition = byUserNr;
 			eState = STATE_IDLE;
 			progSet(PROG_IDLE);
 		}
+		menu_nav_menu(TYPE_PROMPT);
+		break;
+	case STATE_PROMPT:
+		/* check encoder */
+		menu_nav_menu(TYPE_MAN);
 		break;
 	default:
 		break;
@@ -510,38 +512,120 @@ rgb_t menuEepReadColor(uint8_t byAdr)
 	return sRet;
 }
 
-/* local function definitions *********************************************/
-static void menu_refresh(uint8_t byPos)
+void menuEepWriteColor(uint8_t byAdr, rgb_t sColor)
 {
-	static uint8_t byCurPos = 0; /**< last known position in menu (to remove red frame from old position) */
-
-	/* get position of new element */
-	psCurrentMenu->byCurElement = byPos;
-
-	/* remove red frame from old position and set red frame around new position */
-	gdispFillArea(3, 2+(15*byCurPos), 122, 15, White);
-	gdispDrawString(5, 5+(15*byCurPos), psCurrentMenu->psElement[byCurPos].pcName, font, Black);
-	gdispFillArea(3, 2+(15*byPos), 122, 15, HTML2COLOR(0x4674e9));
-	gdispDrawString(5, 5+(15*byPos), psCurrentMenu->psElement[byPos].pcName, font, White);
-
-	/* update last known position */
-	byCurPos = byPos;
+	/* write 3 bytes into EEPROM */
+	(void)i2c_eeprom_write_byte(byAdr, sColor.byR);
+	i2c_wait_eeprom();
+	(void)i2c_eeprom_write_byte(byAdr+1, sColor.byG);
+	i2c_wait_eeprom();
+	(void)i2c_eeprom_write_byte(byAdr+2, sColor.byB);
+	i2c_wait_eeprom();
 }
 
-static void menu_manual_refresh(uint8_t byPos)
+/* local function definitions *********************************************/
+static void menu_refresh(uint8_t byPos, uint8_t byType, uint8_t byNewMenu)
 {
-	static uint8_t byCurPos = 0;
-	
-	/* see menu_refresh(), but fixed positions below color progressbars */
-	if(byCurPos != byPos)
+	static uint8_t byCurPosNormal = 0; /**< last known position in menu (to remove red frame from old position) */
+	static uint8_t byCurPosMan 	  = 0; /**< last known position in menu (to remove red frame from old position) */
+
+	if(byNewMenu == 1)
 	{
-		gdispFillArea(3, 80+(15*byCurPos), 122, 15, White);
-		gdispDrawString(5, 83+(15*byCurPos), (byPos == 0)?"Zurueck":"Speichern", font, Black);
-		gdispFillArea(3, 80+(15*byPos), 122, 15, HTML2COLOR(0x4674e9));
-		gdispDrawString(5, 83+(15*byPos), (byPos == 0)?"Speichern":"Zurueck", font, White);
-		byCurPos = byPos;
+		byCurPosMan = 0;
+		byCurPosNormal = 0;
+	}
+
+	if(byType == TYPE_NORMAL)
+	{
+		/* get position of new element */
+		psCurrentMenu->byCurElement = byPos;
+
+		/* remove red frame from old position and set red frame around new position */
+		gdispFillArea(3, 2+(15*byCurPosNormal), 122, 15, White);
+		gdispDrawString(5, 5+(15*byCurPosNormal), psCurrentMenu->psElement[byCurPosNormal].pcName, font, Black);
+		gdispFillArea(3, 2+(15*byPos), 122, 15, HTML2COLOR(0x4674e9));
+		gdispDrawString(5, 5+(15*byPos), psCurrentMenu->psElement[byPos].pcName, font, White);
+
+		/* update last known position */
+		byCurPosNormal = byPos;
+	}
+	else
+	{
+		/* see menu_refresh(), but fixed positions below color progressbars */
+		if(byCurPosMan != byPos)
+		{
+			gdispFillArea(3, 80+(15*byCurPosMan), 122, 15, White);
+			gdispDrawString(5, 83+(15*byCurPosMan), (byPos == 0)?"Zurueck":"Speichern", font, Black);
+			gdispFillArea(3, 80+(15*byPos), 122, 15, HTML2COLOR(0x4674e9));
+			gdispDrawString(5, 83+(15*byPos), (byPos == 0)?"Speichern":"Zurueck", font, White);
+			byCurPosMan = byPos;
+		}
 	}
 }
+
+static void menu_nav_menu(uint8_t byType)
+{
+	uint8_t byMax;
+	int8_t byEnc = 0;
+	
+	if(byType == TYPE_NORMAL)
+	{
+		byMax = (psCurrentMenu->byNumElements-1);
+	}
+	else
+	{
+		byMax = 1;
+	}
+	
+	byEnc = uiGetEncoder();
+
+	if(byEnc < 0)
+	{
+		if(byPosition > 0)
+		{
+			/* go up */
+			if(byType == TYPE_PROMPT)
+			{
+				menu_prompt_refresh(--byPosition);
+			}
+			else
+			{
+				menu_refresh(--byPosition, byType, 0);
+			}
+		}	
+	}
+	
+	if(byEnc > 0)
+	{
+		if(byPosition < byMax)
+		{
+			/* go down */
+			if(byType == TYPE_PROMPT)
+			{
+				menu_prompt_refresh(++byPosition);
+			}
+			else
+			{
+				menu_refresh(++byPosition, byType, 0);
+			}
+		}
+	}
+}
+
+// static void menu_manual_refresh(uint8_t byPos)
+// {
+	// static uint8_t byCurPos = 0;
+	
+	// /* see menu_refresh(), but fixed positions below color progressbars */
+	// if(byCurPos != byPos)
+	// {
+		// gdispFillArea(3, 80+(15*byCurPos), 122, 15, White);
+		// gdispDrawString(5, 83+(15*byCurPos), (byPos == 0)?"Zurueck":"Speichern", font, Black);
+		// gdispFillArea(3, 80+(15*byPos), 122, 15, HTML2COLOR(0x4674e9));
+		// gdispDrawString(5, 83+(15*byPos), (byPos == 0)?"Speichern":"Zurueck", font, White);
+		// byCurPos = byPos;
+	// }
+// }
 
 static void menu_prompt_refresh(uint8_t byPos)
 {
@@ -596,10 +680,17 @@ static void showPrompt(char *caText)
 	/* empty display */
 	guiShowPage(MAIN_PAGE);
 
+	/* Background color (grey) */
 	gdispFillArea(0, 0, 127, 127, HTML2COLOR(0xcccccc));
+	
+	/* Red frame for Text */
+	gdispFillArea(5, 20, 117, 30, HTML2COLOR(0xF5A9A9));
+	gdispDrawBox(5, 20, 117, 30, HTML2COLOR(0xCC0000));
+	
+	/* Text */
+	gdispDrawString(8, 28, caText, bigfont, HTML2COLOR(0xCC0000));
 
-	gdispDrawString(10, 20, caText, bigfont, Red);
-
+	/* Buttons */
 	gdispFillArea(10, 83, 45, 15, HTML2COLOR(0x4674e9));
 	gdispDrawString(30, 85, "Ja", font, White);
 	gdispDrawString(80, 85, "Nein", font, White);
@@ -693,7 +784,7 @@ static void setColor(void)
 		byCol.byG = 255;
 		break;
 	case ELEM_USER_1:
-		byCol = menuEepReadColor(USER_AREA+(0*4));
+		byCol = menuEepReadColor(USER_AREA);
 		break;
 	case ELEM_USER_2:
 		byCol = menuEepReadColor(USER_AREA+(1*4));
@@ -719,11 +810,17 @@ static void setColor(void)
 /* UNDER CONSTRUCTION **********************************************************/
 static void setScene(void)
 {
-	uint8_t byScene = psCurrentMenu->psElement[psCurrentMenu->byCurElement].byID;
+	uint8_t byScene = byPosition; //psCurrentMenu->psElement[psCurrentMenu->byCurElement].byID;
 	progSetScene(byScene);
 }
 
 static void setSpeed(void)
 {
-
+	progSetSpeed(byPrePos, byPosition);
 }
+
+/* Menu navigation ************************************************************/
+//static void menu_update_encoder(void)
+//{
+//	iEncValue += uiReadEncoder();
+//}

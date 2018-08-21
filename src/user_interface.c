@@ -15,12 +15,14 @@ volatile uint32_t dwTick = 0;	/**< timing variable from timer callback (1 ms) fo
 
 static int8_t iLastVal = 0;		/**< old encoder value */
 static int8_t iEnc_delta = 0;	/**< value difference between the two encoder inputs */
+static int8_t iEncValue = 0; 	/**< encoder value */
 
 static uint8_t byButState = 0;	/**< variable for logical button state */
+static uint8_t byLongFlag = 0;  /**< check if button has been pressed for a long time */
 
 static const int16_t iaTable[16] = {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0}; /**< LUT for encoder values */
 
-uint32_t dwADC[3];					/**< ADC values for the 3 faders */
+uint32_t dwADC[3];				/**< ADC values for the 3 faders */
 
 /* Key definitions */
 struct
@@ -97,14 +99,6 @@ void vUITask( void *pvParameters )
 	/* init pseudo random generator */
 	srand((unsigned) timerGetVal());
 
-	/* init display library */
-	gfxInit();
-
-	guiInit();
-	
-	/* init user menu */
-	menu_init();
-
 #warning PWM setting for background light
 	timerPWMSet(80);
 
@@ -114,11 +108,8 @@ void vUITask( void *pvParameters )
 		/* read out voltaged of the 3 faders */
 		adcRead(dwADC);
 		
-		/* update menu state machine */
-		menu_handler();
-		
-		/* update program state machine */
-		progHandler();
+		/* poll encoder */
+		iEncValue += uiReadEncoder();
 
 		/* check if button was pressed and enable or disable LED (and channel activation) */
 		for(byCnt = 0; byCnt < 5; byCnt++)
@@ -197,6 +188,22 @@ int8_t uiReadEncoder(void)
 	return iRet;
 }
 
+int8_t uiGetEncoder(void)
+{
+	if(iEncValue >= 4)
+	{
+		iEncValue = 0;
+		return 1;
+	}
+	else if(iEncValue <= -4)
+	{
+		iEncValue = 0;
+		return -1;
+	}
+	
+	return 0;
+}
+
 /* FADER *******************************************************************/
 rgb_t uiReadFader(void)
 {
@@ -240,12 +247,20 @@ uint8_t uiGetButton(uint8_t byButton)
 {
 	uint8_t byRet = 0;
 
+
 	switch(byButton)
 	{
 	case BUTTON0:
 		if(sKeys.Key0 == 1)
 		{
-			byRet = 1;
+			if(byLongFlag != 0)
+			{
+				byLongFlag = 0;
+			}
+			else
+			{
+				byRet = 1;
+			}
 			sKeys.Key0 = 0;
 		}
 		break;
@@ -280,7 +295,14 @@ uint8_t uiGetButton(uint8_t byButton)
 	case BUTTON_ENTER:
 		if(sKeys.KeyEnter == 1)
 		{
-			byRet = 1;
+			if(byLongFlag != 0)
+			{
+				byLongFlag = 0;
+			}
+			else
+			{
+				byRet = 1;
+			}
 			sKeys.KeyEnter = 0;
 		}
 		break;
@@ -302,6 +324,7 @@ uint8_t uiGetButtonLong(uint8_t byButton)
 		{
 			byRet = 1;
 			sLong.Key0 = 0;
+			byLongFlag = 1;
 		}
 		break;
 	case BUTTON1:
@@ -309,6 +332,7 @@ uint8_t uiGetButtonLong(uint8_t byButton)
 		{
 			byRet = 1;
 			sLong.Key1 = 0;
+			byLongFlag = 1;
 		}
 		break;
 	case BUTTON2:
@@ -316,6 +340,7 @@ uint8_t uiGetButtonLong(uint8_t byButton)
 		{
 			byRet = 1;
 			sLong.Key2 = 0;
+			byLongFlag = 1;
 		}
 		break;
 	case BUTTON3:
@@ -323,6 +348,7 @@ uint8_t uiGetButtonLong(uint8_t byButton)
 		{
 			byRet = 1;
 			sLong.Key3 = 0;
+			byLongFlag = 1;
 		}
 		break;
 	case BUTTON4:
@@ -330,6 +356,7 @@ uint8_t uiGetButtonLong(uint8_t byButton)
 		{
 			byRet = 1;
 			sLong.Key4 = 0;
+			byLongFlag = 1;
 		}
 		break;
 	case BUTTON_ENTER:
@@ -337,6 +364,7 @@ uint8_t uiGetButtonLong(uint8_t byButton)
 		{
 			byRet = 1;
 			sLong.KeyEnter = 0;
+			byLongFlag = 1;
 		}
 		break;
 	default:

@@ -6,6 +6,8 @@
 
 extern font_t font;
 
+extern void vMenuTask( void *pvParameters );
+
 /**< @brief initialize menu (call once before endless loop in main or task) */
 void menu_init(void);
 
@@ -19,5 +21,13 @@ void menu_handler(void);
 * 	@return				RGB value of user color
 */
 rgb_t menuEepReadColor(uint8_t byAdr);
+
+/**
+*	@brief write color setting into EEPROM
+*
+*	@param[in]	byAdr	EEPROM start address
+*	@param[in]	sColor	color data
+*/
+void menuEepWriteColor(uint8_t byAdr, rgb_t sColor);
 
 #endif

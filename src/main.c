@@ -29,8 +29,9 @@ int main (void)
 
 	xTaskCreate(vStorageTask, "Storage", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL);
 	xTaskCreate(vDebugTask, "DEBUG", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, NULL);
-	xTaskCreate(vUITask, "UI", 265, NULL, tskIDLE_PRIORITY + 1, NULL);
-	xTaskCreate(vDMXTask, "DMX", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+	xTaskCreate(vUITask, "UI", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+	xTaskCreate(vMenuTask, "Menu", 265, NULL, tskIDLE_PRIORITY+1, NULL);
+	xTaskCreate(vDMXTask, "DMX", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL);
 
 	/* Start the scheduler. */
 	vTaskStartScheduler();

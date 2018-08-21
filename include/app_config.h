@@ -1,6 +1,9 @@
 #ifndef _APP_CONFIG_H
 #define _APP_CONFIG_H
 
+/** @brief enable or disable DEBUG mode (displaying debug messages via UART) */
+#define DEBUG_EN
+
 /** @brief software revision (major - minor) */
 #define VERSION			0x02
 

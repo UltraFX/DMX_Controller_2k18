@@ -18,6 +18,12 @@ static prog_state_t eCurrState = PROG_IDLE; /**< current active state in the pro
 
 static rgb_t sSoll[5]= {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}; /**< desired color values for each of the 5 lamps */
 
+static uint16_t wSpeedProg = TIME_MOODLIGHT;
+static uint16_t wSpeedWait = TIME_RANDOM_WAIT;
+
+static uint16_t waSPeedProgTable[3] = {500, 100, 50};
+static uint16_t waSPeedWaitTable[3] = {60000, 10000, 5000};
+
 /* local Function prototypes **************************************/
 
 /**  program for the regular moodlight */
@@ -172,7 +178,7 @@ static void progMoodlight(void)
 	if(dwTime > dwLimit)
 	{
 		/* set new timeout */
-		dwLimit = dwTime + TIME_MOODLIGHT;
+		dwLimit = dwTime + wSpeedProg;
 
 		/* increase hue value by 1 */
 		sMood.wHue++;
@@ -207,7 +213,7 @@ static void progDelMoodlight(void)
 	if(dwTime > dwLimit)
 	{
 		/* set new timeout */
-		dwLimit = dwTime + TIME_MOODLIGHT;
+		dwLimit = dwTime + wSpeedProg;
 
 		/* do for each lamp individually */
 		for(byCnt = 0; byCnt < 5; byCnt++)
@@ -240,7 +246,7 @@ static void prog_random_all(void)
 	
 	if(dwTime > dwLimit)
 	{
-		dwLimit = dwTime + TIME_RANDOM_WAIT;
+		dwLimit = dwTime + wSpeedWait;
 				
 		/* generate pseudo-random color in hue spectrum (360°) */
 #ifdef ENABLE_HSV_RAND
@@ -280,7 +286,7 @@ static void prog_random_each(void)
 
 	if(dwTime > dwLimit)
 	{
-		dwLimit = dwTime + TIME_RANDOM_WAIT;
+		dwLimit = dwTime + wSpeedWait;
 		
 		for(byCnt = 0; byCnt < 5; byCnt++)
 		{
@@ -374,7 +380,7 @@ uint8_t progSetScene(uint8_t byScene)
 
     for(byCnt = 0; byCnt < 5; byCnt++)
     {
-        byAddr = SCENES_AREA + ((byScene + byCnt) * 4);
+        byAddr = SCENES_AREA + (byScene*20) + (byCnt * 4);
         sSoll[byCnt] = menuEepReadColor(byAddr);
 
 //        if(byRet != 0)
@@ -386,6 +392,18 @@ uint8_t progSetScene(uint8_t byScene)
     eCurrState = PROG_TRANSITION;
 
     return 0;
+}
+
+void progSetSpeed(uint8_t byType, uint8_t bySpeed)
+{
+	if(byType == 0)
+	{
+		wSpeedProg = waSPeedProgTable[bySpeed];
+	}
+	else
+	{
+		wSpeedWait = waSPeedWaitTable[bySpeed];
+	}
 }
 
 static uint8_t progCalcTransition(uint8_t byDevice, rgb_t sSoll)
